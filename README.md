@@ -71,9 +71,25 @@ Built-in safety limits (tune in `.env`):
   it places zero new orders for the rest of that run and just texts you.
 
 These are basic guardrails, not a substitute for watching the account. There
-is no limit on how many *different* symbols can signal BUY in the same run,
-so a volatile watchlist can still deploy more capital in one day than you
-might expect — keep the watchlist short while you're building confidence.
+is no limit on how many *different* symbols in `WATCHLIST_SYMBOLS` can signal
+BUY in the same run, so a volatile watchlist can still deploy more capital in
+one day than you might expect — keep the watchlist short while you're
+building confidence.
+
+### 2c. Optional: let it pick new stocks beyond your watchlist (screener)
+By default `auto_trade.py` only ever trades `WATCHLIST_SYMBOLS` plus whatever
+it's currently holding — it never looks for anything else. Setting
+`SCREENER_ENABLED=true` turns on an additional scan of the S&P 500
+(`app/sp500_tickers.txt`, a static snapshot — refresh it periodically) for
+fresh BUY signals using the exact same strategy, and can open up to
+`MAX_NEW_SCREENER_POSITIONS` brand-new positions per run in companies you
+never explicitly chose.
+
+This is a meaningfully bigger risk surface than the fixed watchlist: more
+unfamiliar names, more capital in play, no "I recognize this company" check
+from you. It's off by default — only turn it on after you've watched the
+watchlist-only behavior for a while and trust it, and start with a low
+`MAX_NEW_SCREENER_POSITIONS` (default 3).
 
 ### 3. Twilio (SMS)
 Create an account at https://www.twilio.com, buy a phone number (~$1/mo),
@@ -92,13 +108,15 @@ Confirm you see sensible BUY/HOLD/SELL output before deploying either one.
 
 1. Push this repo to GitHub, then create a new Railway project from it.
 2. Add all the `.env` variables as Railway environment variables/secrets
-   (never commit your real `.env`).
-3. Add a **Volume** mounted at `/app` so `state.json` persists between cron
+   (never commit your real `.env`). Set `STATE_FILE=/data/state.json` to
+   match the volume below.
+3. Add a **Volume** mounted at `/data` so `state.json` persists between cron
    runs — otherwise every run looks like a fresh signal and you'll get
-   duplicate texts.
-4. Railway will pick up `railway.toml`'s `cronSchedule` (weekdays ~4:05pm ET)
-   and run `main.py` once per trading day after the close. Adjust the cron
-   expression for daylight saving or your preferred time.
+   duplicate texts/orders.
+4. Set the service's cron schedule (weekdays ~4:05pm ET, i.e. shortly after
+   market close — adjust for daylight saving). The Dockerfile defaults to
+   running `auto_trade.py`; override the start command to `python main.py`
+   if you want the advisory-only script instead.
 
 ## Limitations, read before relying on this
 

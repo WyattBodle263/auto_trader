@@ -12,13 +12,19 @@ READ THIS FIRST:
   TRAILING_STOP_PCT from its peak since purchase) OR the trend-reversal
   signal, whichever comes first. The trailing stop lets a winner keep
   running while it's still climbing, and locks in gains once it pulls back.
+- If SCREENER_ENABLED=true, it also scans the S&P 500 (beyond
+  WATCHLIST_SYMBOLS) for fresh BUY signals and can open up to
+  MAX_NEW_SCREENER_POSITIONS brand-new positions per run in companies you
+  never explicitly chose. Off by default -- this materially increases risk
+  (unfamiliar names, more capital in play) and should only be turned on
+  once you trust the watchlist-only behavior.
 - Intended to be invoked once per run (e.g. a Railway cron trigger shortly
   after market close), not run as a perpetual loop.
 """
 
 import sys
 
-from app import alpaca_client, market_data, notifier, risk, state
+from app import alpaca_client, market_data, notifier, risk, screener, state
 from app.config import Config
 from app.strategy import Signal, evaluate
 
@@ -123,6 +129,28 @@ def main() -> None:
                 print(f"[{symbol}] sell order failed: {exc}", file=sys.stderr)
 
         state.set_action(signal_state, symbol, signal.action)
+
+    if cfg.SCREENER_ENABLED:
+        already_tracked = set(positions_by_symbol) | set(cfg.WATCHLIST_SYMBOLS)
+        try:
+            candidates = screener.find_new_buy_candidates(
+                already_tracked, cfg, cfg.MAX_NEW_SCREENER_POSITIONS
+            )
+        except Exception as exc:
+            print(f"Screener scan failed: {exc}", file=sys.stderr)
+            candidates = []
+
+        for signal, current_price in candidates:
+            notional = risk.position_size_usd(equity, cfg)
+            print(f"[{signal.symbol}] BUY (screener): {signal.reason}")
+            try:
+                alpaca_client.submit_buy(client, signal.symbol, notional)
+                _text(cfg, f"BOUGHT ~${notional:.2f} of {signal.symbol} (screener pick): {signal.reason}")
+                state.set_action(signal_state, signal.symbol, "BUY")
+                state.set_peak_price(signal_state, signal.symbol, current_price)
+                actions_taken.append(f"BOUGHT ~${notional:.2f} {signal.symbol} (screener)")
+            except Exception as exc:
+                print(f"[{signal.symbol}] screener buy order failed: {exc}", file=sys.stderr)
 
     state.save(cfg.STATE_FILE, signal_state)
 

@@ -69,6 +69,11 @@ class Config:
     # from its peak since purchase (independent of the trend-reversal SELL).
     TRAILING_STOP_PCT = _float("TRAILING_STOP_PCT", 0.08)
 
+    # Screener: scan the S&P 500 for new BUY candidates beyond WATCHLIST_SYMBOLS.
+    SCREENER_ENABLED = _bool("SCREENER_ENABLED", False)
+    # Cap on how many brand-new positions the screener can open in one run.
+    MAX_NEW_SCREENER_POSITIONS = _int("MAX_NEW_SCREENER_POSITIONS", 3)
+
     STATE_FILE = os.environ.get("STATE_FILE", "state.json")
 
     def require(self, *names: str) -> None:

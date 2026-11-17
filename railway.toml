@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Weekdays, 21:05 UTC = ~4:05pm ET (adjust by 1hr for daylight saving).
+cronSchedule = "5 21 * * 1-5"
+numReplicas = 1
+restartPolicyType = "NEVER"
+# Dockerfile's default CMD runs main.py (advisory/SMS-only). To run the
+# fully-automated trader instead, override Railway's start command to:
+#   python auto_trade.py

@@ -7,10 +7,17 @@ def kill_switch_tripped(day_pl_pct: float, cfg) -> bool:
     return day_pl_pct <= -cfg.MAX_DAILY_LOSS_PCT
 
 
-def position_size_usd(equity: float, cfg) -> float:
-    """Dollar amount to spend on a single new BUY, as a fixed fraction of
-    account equity. Does not compound across multiple same-day signals."""
-    return equity * cfg.POSITION_SIZE_PCT
+def dynamic_position_size_usd(equity: float, conviction: float, cfg) -> float:
+    """Dollar amount to spend on a new BUY, scaled by how strong that
+    specific signal's conviction score is (see strategy._buy_conviction):
+    a weak-but-still-qualifying signal gets MIN_POSITION_SIZE_PCT of equity,
+    a maximally strong one gets MAX_POSITION_SIZE_PCT, linearly in between.
+    Does not compound across multiple same-day signals.
+    """
+    size_pct = cfg.MIN_POSITION_SIZE_PCT + conviction * (
+        cfg.MAX_POSITION_SIZE_PCT - cfg.MIN_POSITION_SIZE_PCT
+    )
+    return equity * size_pct
 
 
 def trailing_stop_tripped(current_price: float, peak_price: float, cfg) -> bool:

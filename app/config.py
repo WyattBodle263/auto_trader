@@ -60,8 +60,10 @@ class Config:
     MACD_SIGNAL = _int("MACD_SIGNAL", 9)
 
     # --- Risk controls for auto_trade.py ---
-    # Fraction of account equity to spend on any single new BUY.
-    POSITION_SIZE_PCT = _float("POSITION_SIZE_PCT", 0.05)
+    # Fraction of equity spent on a new BUY scales with that signal's
+    # conviction score: weakest qualifying signal -> MIN, strongest -> MAX.
+    MIN_POSITION_SIZE_PCT = _float("MIN_POSITION_SIZE_PCT", 0.02)
+    MAX_POSITION_SIZE_PCT = _float("MAX_POSITION_SIZE_PCT", 0.10)
     # Kill switch: if today's account drawdown reaches this fraction, no new
     # orders are placed for the rest of the run -- you get a text instead.
     MAX_DAILY_LOSS_PCT = _float("MAX_DAILY_LOSS_PCT", 0.03)

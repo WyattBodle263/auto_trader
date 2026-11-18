@@ -8,6 +8,12 @@ READ THIS FIRST:
   are comfortable with what it does.
 - A tripped daily-loss kill switch stops ALL new orders for the rest of the
   run and just texts you instead.
+- Position size on a new BUY isn't a flat percentage -- it scales with that
+  signal's conviction score (trend strength + momentum strength + RSI
+  headroom), between MIN_POSITION_SIZE_PCT and MAX_POSITION_SIZE_PCT of
+  equity. A barely-qualifying signal gets the minimum; a strong one gets
+  closer to the maximum. This is a transparent heuristic, not a model that
+  predicts returns.
 - A held position exits on EITHER a trailing stop (price down
   TRAILING_STOP_PCT from its peak since purchase) OR the trend-reversal
   signal, whichever comes first. The trailing stop lets a winner keep
@@ -110,7 +116,7 @@ def main() -> None:
         print(f"[{symbol}] {signal.action}: {signal.reason} (held: {held_qty})")
 
         if signal.action == "BUY" and signal.action != previous and held_qty == 0:
-            notional = risk.position_size_usd(equity, cfg)
+            notional = risk.dynamic_position_size_usd(equity, signal.conviction, cfg)
             try:
                 alpaca_client.submit_buy(client, symbol, notional)
                 _text(cfg, f"BOUGHT ~${notional:.2f} of {symbol}: {signal.reason}")
@@ -141,7 +147,7 @@ def main() -> None:
             candidates = []
 
         for signal, current_price in candidates:
-            notional = risk.position_size_usd(equity, cfg)
+            notional = risk.dynamic_position_size_usd(equity, signal.conviction, cfg)
             print(f"[{signal.symbol}] BUY (screener): {signal.reason}")
             try:
                 alpaca_client.submit_buy(client, signal.symbol, notional)

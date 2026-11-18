@@ -65,8 +65,18 @@ Fidelity has no API for placing orders, so full automation means funding a
    account with real money (a transfer you initiate yourself in Alpaca's
    UI), switch to the live API key/secret, and set `ALPACA_PAPER=false`.
 
+Position size on a new BUY isn't a flat percentage. Each BUY signal carries a
+0-1 **conviction score** — a blend of how far the trend has separated, how
+strong the MACD histogram is relative to price, and how much RSI headroom is
+left before overbought. That score linearly scales the position between
+`MIN_POSITION_SIZE_PCT` (weakest qualifying signal) and `MAX_POSITION_SIZE_PCT`
+(strongest) of account equity. This is a transparent heuristic built from the
+same indicators already driving the BUY/SELL decision — not a separate model,
+and not a claim that higher conviction means higher expected return.
+
 Built-in safety limits (tune in `.env`):
-- `POSITION_SIZE_PCT` — max fraction of account equity per new BUY (default 5%).
+- `MIN_POSITION_SIZE_PCT` / `MAX_POSITION_SIZE_PCT` — the sizing range above
+  (defaults 2%-10% of equity).
 - `MAX_DAILY_LOSS_PCT` — daily loss kill switch (default 3%). Once tripped,
   it places zero new orders for the rest of that run and just texts you.
 
